@@ -1,7 +1,9 @@
+from typing import Any
+
 from fastapi import APIRouter
 
-from backend.schemas.models import CopilotRequest, CopilotResponse
-from backend.services.ai_service import AIService
+from backend.schemas.models import CopilotAnalyzeRequest
+from backend.services.ai_service import analyze_incident
 from backend.services.devops_service import DevOpsService
 
 
@@ -11,34 +13,50 @@ router = APIRouter(
 )
 
 devops_service = DevOpsService()
-ai_service = AIService()
 
 
-@router.post("", response_model=CopilotResponse)
-async def ask_copilot(request: CopilotRequest):
+@router.post("/analyze")
+async def analyze(request: CopilotAnalyzeRequest):
 
-    context = {}
+    # ---------------------------------------------
+    # Get information from Member 2's DevOps API
+    # ---------------------------------------------
 
-    # If the user selected an incident scenario,
-    # collect information from the DevOps simulator.
+    status = await devops_service.get_status()
+    logs = await devops_service.get_logs()
+    events = await devops_service.get_events()
+    metrics = await devops_service.get_metrics()
+
+    # ---------------------------------------------
+    # Optional scenario information
+    # ---------------------------------------------
+
     if request.scenario:
         scenario_data = await devops_service.get_scenario(
             request.scenario
         )
 
-        context["scenario"] = scenario_data
+        # Add scenario information to events/context
+        events = {
+            "events": events,
+            "scenario": scenario_data
+        }
 
-    # Collect general system information.
-    context["status"] = await devops_service.get_status()
+    # ---------------------------------------------
+    # Call Member 1's AI/Copilot module
+    # ---------------------------------------------
 
-    # Send the user's question and DevOps context to the AI service.
-    answer = await ai_service.generate_response(
-        command=request.command,
-        context=context
+    diagnosis = analyze_incident(
+        message=request.message,
+        service=request.service,
+        logs=logs,
+        status=status,
+        events=events,
+        metrics=metrics
     )
 
-    return CopilotResponse(
-        answer=answer,
-        scenario=request.scenario,
-        context=context
-    )
+    # ---------------------------------------------
+    # Return Diagnosis to frontend
+    # ---------------------------------------------
+
+    return diagnosis

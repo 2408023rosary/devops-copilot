@@ -2,7 +2,6 @@ import httpx
 
 
 DEVOPS_BASE_URL = "http://localhost:5001/api/devops"
-
 TIMEOUT = 10.0
 
 
@@ -14,9 +13,7 @@ class DevOpsService:
         try:
             async with httpx.AsyncClient(timeout=TIMEOUT) as client:
                 response = await client.get(url)
-
                 response.raise_for_status()
-
                 return response.json()
 
         except httpx.ConnectError:
