@@ -1,0 +1,9 @@
+{
+  "service": "payment-service",
+  "status": "CrashLoopBackOff",
+  "restarts": 6,
+  "logs": [
+    "Database connection refused",
+    "Application exited with code 1"
+  ]
+}
