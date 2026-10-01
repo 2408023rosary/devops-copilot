@@ -1,0 +1,235 @@
+/* Final shared rules: one spacing rhythm and type hierarchy across all routes. */
+#root {
+  max-width: none;
+  text-align: left;
+  border: 0;
+  display: block;
+}
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+:focus-visible {
+  outline: 2px solid #a5b4fc;
+  outline-offset: 4px;
+}
+.main-content {
+  padding: 0;
+}
+.main-content > [class$='-page'] {
+  max-width: 1600px;
+  margin-inline: auto;
+  padding: 32px clamp(20px, 3vw, 48px) 56px;
+}
+.main-content h1 {
+  font-size: clamp(1.75rem, 2.6vw, 2.25rem);
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+  font-weight: 650;
+}
+.main-content h2 {
+  font-size: 1.125rem;
+  line-height: 1.4;
+  letter-spacing: -0.015em;
+}
+.main-content h3 {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+.demo-notice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 10px clamp(20px, 3vw, 48px);
+  background: #101622;
+  border-bottom: 1px solid #263246;
+  color: #b5c0d3;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+.demo-notice span {
+  font-size: 12px;
+  letter-spacing: normal;
+  color: #a3b1c6;
+}
+.skip-link {
+  position: fixed;
+  z-index: 200;
+  top: 8px;
+  left: 8px;
+  transform: translateY(-160%);
+  padding: 12px 20px;
+  border-radius: 8px;
+  background: #c7d2fe;
+  color: #111827;
+}
+.skip-link:focus {
+  transform: translateY(0);
+}
+.empty-results {
+  padding: 24px;
+  color: #a3b1c6;
+  line-height: 1.7;
+}
+.empty-results button {
+  padding: 8px 12px;
+  background: #1a2336;
+  border: 1px solid #35415d;
+  border-radius: 8px;
+}
+.incident-list-item,
+.similar-item {
+  text-align: left;
+}
+.incident-list-item h3,
+.history-item h3 {
+  overflow-wrap: anywhere;
+}
+.chat-messages {
+  min-height: 260px;
+  max-height: 480px;
+  overflow-y: auto;
+}
+.message-content p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.incident-summary {
+  flex-shrink: 0;
+}
+.history-tabs button {
+  min-height: 48px;
+}
+.settings-data {
+  gap: 24px;
+}
+.settings-section {
+  margin: 0;
+}
+.settings-main {
+  display: grid;
+  gap: 20px;
+  align-content: start;
+}
+.settings-section-heading p,
+.setting-row-text span {
+  line-height: 1.65;
+}
+.memory-detail-card {
+  align-self: start;
+}
+.memory-management-actions {
+  flex-wrap: wrap;
+}
+.similar-top {
+  flex-wrap: wrap;
+}
+.incident-log code {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+@media (max-width: 600px) {
+  .main-content > [class$='-page'] {
+    padding: 24px 16px 40px;
+  }
+  .demo-notice {
+    padding-inline: 16px;
+  }
+  .incident-summary {
+    width: 100%;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .summary-item {
+    padding-inline: 10px;
+    min-width: 0;
+  }
+  .history-tabs {
+    display: flex;
+  }
+  .history-tabs button {
+    font-size: 12px;
+    padding: 10px 8px;
+    gap: 6px;
+  }
+  .history-tabs button > span {
+    display: none;
+  }
+  .history-item-main,
+  .history-incident-main {
+    min-width: 0;
+    flex-basis: 180px;
+  }
+  .setting-row {
+    gap: 16px;
+  }
+  .nexus-toggle {
+    flex-shrink: 0;
+  }
+  .details-header {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .details-id-row {
+    flex-wrap: wrap;
+  }
+  .welcome-footer {
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+  }
+}
+.brand {
+  margin-bottom: 12px;
+  color: #a3b1c6;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.09em;
+}
+.danger-button {
+  min-height: 44px;
+  padding: 10px 16px;
+  background: #22171d;
+  border: 1px solid #5c303d;
+  border-radius: 8px;
+  color: #fda4af;
+}
+.nexus-toggle.enabled {
+  background: #414d7d;
+  border-color: #8c9ce6;
+}
+@media (max-width: 600px) {
+  .incident-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .summary-item {
+    width: 100%;
+  }
+  .empty-incident-state,
+  .incident-details,
+  .memory-empty,
+  .memory-detail-card {
+    min-height: 300px;
+  }
+  .incident-list {
+    max-height: none;
+  }
+  .copilot-context .context-note {
+    display: none;
+  }
+}

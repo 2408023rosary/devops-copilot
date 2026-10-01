@@ -1,247 +1,237 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useWorkspace } from './state/workspace-context'
+import { Button, Confirm, Empty, Field, PageHeader } from './components/UI'
+import { downloadFile, formatDate } from './services/download'
 
-function Memory() {
-  const [memoryEnabled, setMemoryEnabled] = useState(true)
-  const [selectedIncident, setSelectedIncident] = useState(null)
-
-  const similarIncidents = [
-    {
-      id: 'INC-014',
-      service: 'payment-service',
-      title: 'Database connection failure',
-      similarity: '94%',
-      date: 'Sep 18, 2026',
-      rootCause: 'Incorrect database host configuration',
-      resolution:
-        'Updated the database host value and restarted the payment-service deployment.',
-    },
-    {
-      id: 'INC-009',
-      service: 'payment-service',
-      title: 'Payment container restart loop',
-      similarity: '87%',
-      date: 'Sep 05, 2026',
-      rootCause: 'Expired database credentials',
-      resolution:
-        'Updated the database credentials stored in the deployment secret.',
-    },
-    {
-      id: 'INC-021',
-      service: 'order-service',
-      title: 'Database unavailable',
-      similarity: '71%',
-      date: 'Sep 25, 2026',
-      rootCause: 'Database instance unavailable',
-      resolution:
-        'Restored database availability and verified application connectivity.',
-    },
-  ]
-
+export default function Memory() {
+  const { data, busy, updateSettings, deleteMemory, clearMemories } = useWorkspace()
+  const [selectedId, setSelectedId] = useState(null)
+  const [query, setQuery] = useState('')
+  const [service, setService] = useState('all')
+  const [sort, setSort] = useState('similarity')
+  const [remove, setRemove] = useState(null)
+  const [targetIncident, setTargetIncident] = useState(
+    data.incidents.find((item) => item.status !== 'resolved')?.id || '',
+  )
+  const navigate = useNavigate()
+  const enabled = data.settings.memoryEnabled
+  const filtered = data.memories
+    .filter(
+      (item) =>
+        (service === 'all' || item.service === service) &&
+        `${item.title} ${item.rootCause} ${item.service} ${item.incidentId}`
+          .toLowerCase()
+          .includes(query.toLowerCase()),
+    )
+    .sort((a, b) =>
+      sort === 'recent'
+        ? b.createdAt.localeCompare(a.createdAt)
+        : (b.similarity || 0) - (a.similarity || 0),
+    )
+  const selected = data.memories.find((item) => item.id === selectedId)
   return (
-    <div className="memory-page">
-      <div className="page-header">
-        <div>
-          <div className="brand">COPILOT MEMORY</div>
-
-          <h1>Memory</h1>
-
-          <p>
-            Help Copilot learn from previous investigations and
-            recognize recurring incidents.
-          </p>
-        </div>
-
+    <div className="memory-page nx-page">
+      <PageHeader
+        eyebrow="INVESTIGATION KNOWLEDGE"
+        title="Memory"
+        description="Keep verified findings and reuse past resolutions as investigation references."
+      >
         <button
-          className={`memory-toggle ${memoryEnabled ? 'enabled' : ''}`}
-          onClick={() => setMemoryEnabled(!memoryEnabled)}
+          className={`nx-button ${enabled ? 'primary' : 'secondary'}`}
+          role="switch"
+          aria-checked={enabled}
+          disabled={busy}
+          onClick={() => updateSettings({ memoryEnabled: !enabled }).catch(() => {})}
         >
-          <span className="memory-toggle-dot"></span>
-
-          {memoryEnabled ? 'Memory Enabled' : 'Memory Disabled'}
+          {enabled ? 'Memory enabled' : 'Memory disabled'}
         </button>
+      </PageHeader>
+      <div className="nx-memory-stats">
+        {[
+          [data.memories.length, 'Stored investigations'],
+          [new Set(data.memories.map((item) => item.service)).size, 'Services covered'],
+          [new Set(data.memories.map((item) => item.rootCause)).size, 'Recorded root causes'],
+        ].map(([value, label]) => (
+          <article className="nx-panel nx-lift" key={label}>
+            <strong className="nx-stat-value">{value}</strong>
+            <span>{label}</span>
+          </article>
+        ))}
       </div>
-
-      <div className="memory-overview">
-        <div className="memory-stat">
-          <span className="memory-stat-icon">🧠</span>
-
-          <div>
-            <strong>24</strong>
-            <span>Stored investigations</span>
-          </div>
+      {!enabled && (
+        <div className="nx-info">
+          Memory is paused. You can review or delete saved records, but attaching and saving
+          investigations is disabled.
         </div>
-
-        <div className="memory-stat">
-          <span className="memory-stat-icon">⌁</span>
-
-          <div>
-            <strong>17</strong>
-            <span>Known patterns</span>
-          </div>
-        </div>
-
-        <div className="memory-stat">
-          <span className="memory-stat-icon">✦</span>
-
-          <div>
-            <strong>9</strong>
-            <span>Repeated incidents detected</span>
-          </div>
-        </div>
-
-        <div className="memory-stat">
-          <span className="memory-stat-icon">✓</span>
-
-          <div>
-            <strong>31</strong>
-            <span>Successful resolutions</span>
-          </div>
-        </div>
-      </div>
-
-      <section className="memory-highlight">
-        <div className="memory-highlight-icon">✦</div>
-
-        <div>
-          <span className="memory-label">SMART FEATURE</span>
-
-          <h2>Have we seen this before?</h2>
-
-          <p>
-            Copilot can compare a new incident with previous
-            investigations and surface similar failures, known root
-            causes, and previous resolutions.
-          </p>
-        </div>
-
-        <button
-          onClick={() => setSelectedIncident(similarIncidents[0])}
+      )}
+      <div className="nx-toolbar">
+        <Field label="Search memories">
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Cause, service, incident…"
+          />
+        </Field>
+        <Field label="Service">
+          <select value={service} onChange={(event) => setService(event.target.value)}>
+            <option value="all">All services</option>
+            {[...new Set(data.memories.map((item) => item.service))].map((name) => (
+              <option key={name}>{name}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Sort memories">
+          <select value={sort} onChange={(event) => setSort(event.target.value)}>
+            <option value="similarity">Reference score</option>
+            <option value="recent">Most recent</option>
+          </select>
+        </Field>
+        <Button
+          disabled={!filtered.length}
+          onClick={() =>
+            downloadFile(
+              'nexus-memories.json',
+              JSON.stringify(filtered, null, 2),
+              'application/json',
+            )
+          }
         >
-          Find Similar Incidents →
-        </button>
-      </section>
-
-      <div className="memory-layout">
-        <section className="memory-main-card">
-          <div className="memory-section-header">
-            <div>
-              <h2>Similar Incidents</h2>
-
-              <p>
-                Matches for the current payment-service incident.
-              </p>
-            </div>
-
-            <span className="match-count">
-              {similarIncidents.length} matches
+          Export results
+        </Button>
+      </div>
+      <div className="nx-memory-layout">
+        <section className="nx-panel">
+          <div className="nx-panel-heading">
+            <h2>Stored investigations</h2>
+            <span className="nx-meta" role="status">
+              {filtered.length} records
             </span>
           </div>
-
-          <div className="similar-list">
-            {similarIncidents.map((incident) => (
-              <button
-                key={incident.id}
-                className={`similar-item ${
-                  selectedIncident?.id === incident.id
-                    ? 'selected'
-                    : ''
-                }`}
-                onClick={() => setSelectedIncident(incident)}
-              >
-                <div className="similar-score">
-                  <strong>{incident.similarity}</strong>
-                  <span>match</span>
-                </div>
-
-                <div className="similar-content">
-                  <div className="similar-top">
-                    <span>{incident.id}</span>
-                    <span>{incident.date}</span>
-                  </div>
-
-                  <h3>{incident.title}</h3>
-
-                  <p>{incident.service}</p>
-                </div>
-
-                <span className="similar-arrow">→</span>
-              </button>
-            ))}
-          </div>
+          <p className="nx-meta">
+            Reference scores belong to the original sample dataset; new records are unscored.
+          </p>
+          {filtered.map((item) => (
+            <button
+              key={item.id}
+              className={`nx-memory-item ${selectedId === item.id ? 'selected' : ''}`}
+              aria-pressed={selectedId === item.id}
+              onClick={() => setSelectedId(item.id)}
+            >
+              <span className="nx-memory-score">
+                {item.similarity == null ? '—' : `${item.similarity}%`}
+                <small>{item.similarity == null ? 'unscored' : 'sample'}</small>
+              </span>
+              <span className="nx-record-main">
+                <span className="nx-meta">
+                  {item.incidentId} · {item.service}
+                </span>
+                <strong>{item.title}</strong>
+                <span className="nx-meta">{formatDate(item.createdAt)}</span>
+              </span>
+              <span aria-hidden="true">→</span>
+            </button>
+          ))}
+          {!filtered.length && (
+            <Empty
+              title="No matching memories"
+              action={
+                query || service !== 'all' ? (
+                  <Button
+                    onClick={() => {
+                      setQuery('')
+                      setService('all')
+                    }}
+                  >
+                    Clear filters
+                  </Button>
+                ) : (
+                  <Button onClick={() => navigate('/copilot')}>Start an investigation</Button>
+                )
+              }
+            >
+              Save a verified root cause and resolution from a Nexus AI conversation.
+            </Empty>
+          )}
         </section>
-
-        <aside className="memory-detail-card">
-          {selectedIncident ? (
-            <>
-              <div className="memory-detail-top">
-                <span className="memory-label">
-                  PREVIOUS INVESTIGATION
-                </span>
-
-                <span className="similarity-badge">
-                  {selectedIncident.similarity} match
-                </span>
-              </div>
-
-              <h2>{selectedIncident.id}</h2>
-
-              <p className="memory-detail-service">
-                {selectedIncident.service}
+        <aside className="nx-panel">
+          {selected ? (
+            <div className="nx-tab-content" key={selected.id}>
+              <div className="brand">PREVIOUS INVESTIGATION</div>
+              <h2>{selected.title}</h2>
+              <p className="nx-meta">
+                {selected.incidentId} · {selected.service}
               </p>
-
-              <div className="memory-detail-section">
-                <span>ROOT CAUSE</span>
-
-                <p>{selectedIncident.rootCause}</p>
+              <div className="nx-context-block">
+                <h3>Root cause</h3>
+                <p>{selected.rootCause}</p>
               </div>
-
-              <div className="memory-detail-section">
-                <span>WHAT FIXED IT</span>
-
-                <p>{selectedIncident.resolution}</p>
+              <div className="nx-context-block">
+                <h3>What resolved it</h3>
+                <p>{selected.resolution}</p>
               </div>
-
-              <button className="use-memory-button">
-                Use This Investigation
-              </button>
-            </>
-          ) : (
-            <div className="memory-empty">
-              <div>🧠</div>
-
-              <h2>Select a match</h2>
-
-              <p>
-                Select a previous incident to see what happened and
-                how it was resolved.
-              </p>
+              <Field label="Attach to incident">
+                <select
+                  value={targetIncident}
+                  onChange={(event) => setTargetIncident(event.target.value)}
+                >
+                  <option value="">General investigation</option>
+                  {data.incidents.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.id} · {item.service}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <div className="nx-actions">
+                <Button
+                  tone="primary"
+                  disabled={!enabled}
+                  onClick={() =>
+                    navigate(
+                      `/copilot?${new URLSearchParams({ memory: selected.id, ...(targetIncident ? { incident: targetIncident } : {}) })}`,
+                    )
+                  }
+                >
+                  Use this investigation →
+                </Button>
+                <Button tone="danger" onClick={() => setRemove(selected)}>
+                  Delete memory
+                </Button>
+              </div>
             </div>
+          ) : (
+            <Empty title="Select an investigation">
+              Review its cause and resolution before attaching it to a new conversation.
+            </Empty>
           )}
         </aside>
       </div>
-
-      <section className="memory-management">
+      <section className="nx-panel nx-management">
         <div>
-          <h2>Memory Management</h2>
-
-          <p>
-            Copilot memory stores investigation information so
-            recurring problems can be recognized.
-          </p>
+          <h2>Memory management</h2>
+          <p>Deleting memories removes the reference records, not your incident or chat history.</p>
         </div>
-
-        <div className="memory-management-actions">
-          <button className="secondary-action">
-            Review Stored Memories
-          </button>
-
-          <button className="danger-button">
-            Clear Memory
-          </button>
-        </div>
+        <Button tone="danger" disabled={!data.memories.length} onClick={() => setRemove('all')}>
+          Clear all memories
+        </Button>
       </section>
+      {remove && (
+        <Confirm
+          title={remove === 'all' ? 'Clear all memories?' : 'Delete this memory?'}
+          label={remove === 'all' ? 'Clear memories' : 'Delete memory'}
+          onClose={() => setRemove(null)}
+          onConfirm={async () => {
+            if (remove === 'all') await clearMemories()
+            else await deleteMemory(remove.id)
+            setSelectedId(null)
+          }}
+        >
+          This permanently removes the selected reference records. Existing conversations will keep
+          their messages.
+        </Confirm>
+      )}
     </div>
   )
 }
-
-export default Memory

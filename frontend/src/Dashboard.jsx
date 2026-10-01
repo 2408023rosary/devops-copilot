@@ -1,553 +1,234 @@
 import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useWorkspace } from './state/workspace-context'
+import { Button, Badge, Empty, Modal, PageHeader } from './components/UI'
+import { formatDate } from './services/download'
+import './Dashboard.css'
 
-function Dashboard() {
-  const [analyzing, setAnalyzing] = useState(false)
+export default function Dashboard() {
+  const { data, updatedAt } = useWorkspace()
+  const navigate = useNavigate()
   const [question, setQuestion] = useState('')
-  const [answer, setAnswer] = useState('')
-
-  const services = [
-    {
-      name: 'payment-service',
-      status: 'Critical',
-      statusClass: 'critical',
-      uptime: '98.2%',
-      description: 'Payment processing',
-      icon: '₿',
-    },
-    {
-      name: 'user-service',
-      status: 'Healthy',
-      statusClass: 'healthy',
-      uptime: '99.9%',
-      description: 'Authentication & accounts',
-      icon: '◎',
-    },
-    {
-      name: 'order-service',
-      status: 'Healthy',
-      statusClass: 'healthy',
-      uptime: '99.7%',
-      description: 'Order management',
-      icon: '□',
-    },
-  ]
-
-  const logs = [
-    'Database connection refused',
-    'Application exited with code 1',
-    'Back-off restarting failed container',
-  ]
-
-  const analyzeIncident = () => {
-    setAnalyzing(true)
-
-    setTimeout(() => {
-      setAnalyzing(false)
-    }, 1500)
-  }
-
-  const askCopilot = () => {
-    if (!question.trim()) return
-
-    setAnswer(
-      'Based on the available incident information, payment-service cannot establish a connection to its database. This causes the application to exit and Kubernetes to restart the container.'
-    )
-  }
-
+  const [service, setService] = useState(null)
+  const active = data.incidents.filter((item) => item.status !== 'resolved')
+  const priority = [...active].sort(
+    (a, b) => Number(b.severity === 'critical') - Number(a.severity === 'critical'),
+  )[0]
   return (
-    <div className="dashboard-page">
-
-      {/* ───────────────── HEADER ───────────────── */}
-
-     <header className="dashboard-header">
-
-  <div className="dashboard-branding">
-
-    <div className="nexus-brand">
-
-      <div className="nexus-logo">
-        <span className="logo-node logo-node-top"></span>
-        <span className="logo-node logo-node-left"></span>
-        <span className="logo-node logo-node-right"></span>
-
-        <span className="logo-line logo-line-left"></span>
-        <span className="logo-line logo-line-right"></span>
-        <span className="logo-core"></span>
-      </div>
-
-      <div className="nexus-wordmark">
-        <strong>NEXUS</strong>
-        <span>INFRASTRUCTURE INTELLIGENCE</span>
-      </div>
-
-    </div>
-
-    <div className="dashboard-heading">
-
-      <h1>System Overview</h1>
-
-      <p>
-        Understand your infrastructure at a glance.
-        Monitor services, investigate incidents, and resolve issues faster.
-      </p>
-
-    </div>
-
-  </div>
-
-
-  <div className="dashboard-status">
-
-    <span className="status-dot"></span>
-
-    <div>
-      <strong>1 incident needs attention</strong>
-      <span>System monitoring is active</span>
-    </div>
-
-  </div>
-
-</header>
-
-      {/* ───────────────── ACTIVE INCIDENT ───────────────── */}
-
-      <section className="priority-incident">
-
-        <div className="priority-incident-content">
-
-          <div className="priority-icon">
-            !
-          </div>
-
-          <div className="priority-info">
-
-            <div className="priority-label">
-              ACTIVE INCIDENT
-              <span className="priority-badge">
-                CRITICAL
-              </span>
-            </div>
-
-            <h2>payment-service is failing</h2>
-
-            <p>
-              The service is repeatedly restarting because it
-              cannot establish a database connection.
-            </p>
-
-            <div className="priority-meta">
-              <span>
-                <b>STATUS</b> CrashLoopBackOff
-              </span>
-
-              <span>
-                <b>SERVICE</b> payment-service
-              </span>
-
-              <span>
-                <b>IMPACT</b> Payment processing
-              </span>
-            </div>
-
-          </div>
-
+    <div className="dashboard-page nx-page">
+      <PageHeader
+        eyebrow="INFRASTRUCTURE INTELLIGENCE"
+        title="System Overview"
+        description="Monitor service health, follow investigations, and decide what to check next."
+      >
+        <div className="nx-status-note">
+          <Badge value={active.length ? 'investigating' : 'resolved'} />
+          <span>{active.length} open incidents</span>
+          <small>{updatedAt && `Updated ${formatDate(updatedAt)}`}</small>
         </div>
-
-        <button
-          className="primary-action"
-          onClick={analyzeIncident}
-          disabled={analyzing}
-        >
-          <span>✦</span>
-          {analyzing ? 'Analyzing...' : 'Analyze with Nexus'}
-          <span className="button-arrow">→</span>
-        </button>
-
-      </section>
-
-
-      {/* ───────────────── OVERVIEW ───────────────── */}
-
-      <section className="overview-grid">
-
-        <div className="overview-card">
-
-          <div className="overview-card-top">
-            <span className="overview-icon">◫</span>
-            <span className="overview-label">SERVICES</span>
-          </div>
-
-          <strong>3</strong>
-
-          <span className="overview-subtext">
-            Monitored services
-          </span>
-
-        </div>
-
-
-        <div className="overview-card">
-
-          <div className="overview-card-top">
-            <span className="overview-icon healthy-icon">✓</span>
-            <span className="overview-label">HEALTHY</span>
-          </div>
-
-          <strong>2</strong>
-
-          <span className="overview-subtext">
-            Operating normally
-          </span>
-
-        </div>
-
-
-        <div className="overview-card incident-overview">
-
-          <div className="overview-card-top">
-            <span className="overview-icon critical-icon">!</span>
-            <span className="overview-label">INCIDENTS</span>
-          </div>
-
-          <strong>1</strong>
-
-          <span className="overview-subtext">
-            Requires investigation
-          </span>
-
-        </div>
-
-
-        <div className="overview-card ai-overview">
-
-          <div className="overview-card-top">
-            <span className="overview-icon ai-icon-small">✦</span>
-            <span className="overview-label">NEXUS AI</span>
-          </div>
-
-          <strong>Ready</strong>
-
-          <span className="overview-subtext">
-            Available for assistance
-          </span>
-
-        </div>
-
-      </section>
-
-
-      {/* ───────────────── SERVICES ───────────────── */}
-
-      <section className="dashboard-section">
-
-        <div className="section-heading">
-
-          <div>
-            <span className="section-kicker">
-              INFRASTRUCTURE
+      </PageHeader>
+      {priority ? (
+        <section className="priority-incident">
+          <div className="priority-incident-content">
+            <span className="priority-icon" aria-hidden="true">
+              !
             </span>
-
-            <h2>Service Health</h2>
-
-            <p>
-              Current health and availability of your application services.
-            </p>
+            <div className="priority-info">
+              <div className="priority-label">
+                PRIORITY INCIDENT <Badge value={priority.severity} />
+              </div>
+              <h2>{priority.title}</h2>
+              <p>{priority.description}</p>
+              <div className="nx-meta">
+                {priority.id} · {priority.service} · {priority.error}
+              </div>
+            </div>
           </div>
-
-          <button className="section-link">
-            View all services →
-          </button>
-
+          <Button tone="primary" onClick={() => navigate(`/incidents?id=${priority.id}`)}>
+            Investigate incident →
+          </Button>
+        </section>
+      ) : (
+        <div className="nx-panel">
+          <Empty title="No open incidents">
+            All recorded incidents have been resolved. Service telemetry is shown separately below.
+          </Empty>
         </div>
-
-
+      )}
+      <section className="overview-grid" aria-label="Workspace summary">
+        {[
+          ['Services', data.services.length, 'In this workspace'],
+          [
+            'Healthy',
+            data.services.filter((item) => item.status === 'healthy').length,
+            'Reported service health',
+          ],
+          ['Open incidents', active.length, 'Awaiting resolution'],
+          ['Investigations', data.conversations.length, 'Conversations in this session'],
+        ].map(([label, value, detail]) => (
+          <article className="overview-card nx-lift" key={label}>
+            <div className="overview-card-top">
+              <span className="overview-label">{label}</span>
+              <span className="nx-metric-symbol" aria-hidden="true">
+                ◇
+              </span>
+            </div>
+            <strong key={value} className="nx-value">
+              {value}
+            </strong>
+            <span className="overview-subtext">{detail}</span>
+          </article>
+        ))}
+      </section>
+      <section className="dashboard-section">
+        <div className="section-heading">
+          <div>
+            <span className="section-kicker">INFRASTRUCTURE</span>
+            <h2>Service Health</h2>
+            <p>Select a service for details and related incidents.</p>
+          </div>
+          <span className="section-kicker">{data.services.length} SERVICES</span>
+        </div>
         <div className="service-grid">
-
-          {services.map((service) => (
-
-            <div
-              className={`service-card ${service.statusClass}`}
-              key={service.name}
+          {data.services.map((item) => (
+            <button
+              className={`service-card nx-service-button nx-lift ${item.status}`}
+              key={item.id}
+              onClick={() => setService(item)}
             >
-
               <div className="service-card-header">
-
-                <div className="service-icon">
-                  {service.icon}
-                </div>
-
-                <span
-                  className={`status-badge ${service.statusClass}`}
-                >
-                  <span className="badge-dot"></span>
-                  {service.status}
+                <span className="service-icon" aria-hidden="true">
+                  ▤
                 </span>
-
+                <Badge value={item.status} />
               </div>
-
-
               <div className="service-card-info">
-
-                <h3>{service.name}</h3>
-
-                <p>{service.description}</p>
-
+                <h3>{item.name}</h3>
+                <p>{item.description}</p>
               </div>
-
-
               <div className="service-card-footer">
-
                 <div>
                   <span>UPTIME</span>
-                  <strong>{service.uptime}</strong>
+                  <strong>{item.uptime}</strong>
                 </div>
-
-                <span className="service-arrow">→</span>
-
+                <span aria-hidden="true">↗</span>
               </div>
-
-            </div>
-
-          ))}
-
-        </div>
-
-      </section>
-
-
-      {/* ───────────────── INVESTIGATION ───────────────── */}
-
-      <section className="investigation-section">
-
-        <div className="section-heading">
-
-          <div>
-            <span className="section-kicker">
-              INVESTIGATION
-            </span>
-
-            <h2>Incident Analysis</h2>
-
-            <p>
-              Review the evidence and Nexus AI's diagnosis.
-            </p>
-          </div>
-
-        </div>
-
-
-        <div className="investigation-grid">
-
-          {/* LOGS */}
-
-          <div className="logs-card">
-
-            <div className="card-heading">
-
-              <div>
-                <h3>Recent Logs</h3>
-                <p>payment-service</p>
-              </div>
-
-              <span className="live-indicator">
-                <span></span>
-                LIVE
-              </span>
-
-            </div>
-
-
-            <div className="logs-container">
-
-              {logs.map((log, index) => (
-
-                <div className="log-line" key={index}>
-
-                  <span className="log-number">
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
-
-                  <span className="log-time">
-                    14:{32 + index}:0{index}
-                  </span>
-
-                  <span className="log-message">
-                    {log}
-                  </span>
-
-                </div>
-
-              ))}
-
-            </div>
-
-            <button className="text-button">
-              View full logs →
             </button>
-
-          </div>
-
-
-          {/* AI DIAGNOSIS */}
-
-          <div className="diagnosis-card">
-
-            <div className="diagnosis-header">
-
-              <div className="nexus-ai-mark">
-                ✦
-              </div>
-
-              <div>
-                <span className="section-kicker">
-                  NEXUS AI
-                </span>
-
-                <h3>Incident Diagnosis</h3>
-
-              </div>
-
-              <span className="confidence-badge">
-                92% confidence
-              </span>
-
-            </div>
-
-
-            <div className="diagnosis-content">
-
-              <div className="diagnosis-block">
-
-                <span className="diagnosis-label">
-                  LIKELY ROOT CAUSE
-                </span>
-
-                <p>
-                  <strong>
-                    Database connection failure
-                  </strong>
-                </p>
-
-                <p className="diagnosis-description">
-                  payment-service is unable to establish a
-                  connection to its database. The application
-                  exits as a result, causing Kubernetes to
-                  repeatedly restart the container.
-                </p>
-
-              </div>
-
-
-              <div className="diagnosis-block">
-
-                <span className="diagnosis-label">
-                  RECOMMENDED ACTIONS
-                </span>
-
-                <ul className="recommendation-list">
-
-                  <li>
-                    <span>01</span>
-                    Verify database availability.
-                  </li>
-
-                  <li>
-                    <span>02</span>
-                    Check database credentials.
-                  </li>
-
-                  <li>
-                    <span>03</span>
-                    Verify database host and port.
-                  </li>
-
-                  <li>
-                    <span>04</span>
-                    Review recent configuration changes.
-                  </li>
-
-                </ul>
-
-              </div>
-
-            </div>
-
-          </div>
-
+          ))}
         </div>
-
+        {!data.services.length && (
+          <Empty title="No services yet">
+            Services will appear when they are returned by your API.
+          </Empty>
+        )}
       </section>
-
-
-      {/* ───────────────── ASK NEXUS ───────────────── */}
-
+      {priority && (
+        <section className="nx-two-columns">
+          {data.settings.showLogs && (
+            <article className="nx-panel">
+              <div className="nx-panel-heading">
+                <h2>Recent evidence</h2>
+                <span className="nx-meta">{priority.service}</span>
+              </div>
+              <div className="nx-log-list">
+                {priority.logs.map((line, index) => (
+                  <div key={index}>
+                    <span>{String(index + 1).padStart(2, '0')}</span>
+                    <code>{line}</code>
+                  </div>
+                ))}
+              </div>
+              <Link className="nx-text-link" to={`/incidents?id=${priority.id}&tab=logs`}>
+                Explore logs →
+              </Link>
+            </article>
+          )}
+          <article className="nx-panel">
+            <div className="nx-panel-heading">
+              <h2>Investigation activity</h2>
+              <Badge value={priority.status} />
+            </div>
+            <ol className="nx-timeline">
+              {priority.timeline.slice(-3).map((event, index) => (
+                <li key={index}>
+                  <strong>{event.text}</strong>
+                  <time>{formatDate(event.at)}</time>
+                </li>
+              ))}
+            </ol>
+            <Link className="nx-text-link" to={`/incidents?id=${priority.id}&tab=timeline`}>
+              View full timeline →
+            </Link>
+          </article>
+        </section>
+      )}
       <section className="ask-nexus-card">
-
         <div className="ask-nexus-heading">
-
-          <div className="ask-nexus-icon">
+          <span className="ask-nexus-icon" aria-hidden="true">
             ✦
-          </div>
-
+          </span>
           <div>
-            <span className="section-kicker">
-              NEXUS AI ASSISTANT
-            </span>
-
+            <span className="section-kicker">NEXUS AI ASSISTANT</span>
             <h2>What would you like to investigate?</h2>
-
-            <p>
-              Ask about services, logs, incidents, root causes,
-              or possible remediation steps.
-            </p>
+            <p>Start a conversation with your question and the priority incident attached.</p>
           </div>
-
         </div>
-
-
-        <div className="question-box">
-
+        <form
+          className="question-box"
+          onSubmit={(event) => {
+            event.preventDefault()
+            if (question.trim())
+              navigate(
+                `/copilot?${new URLSearchParams({ ...(priority ? { incident: priority.id } : {}), prompt: question.trim() })}`,
+              )
+          }}
+        >
+          <label className="dashboard-sr-only" htmlFor="dashboard-question">
+            Your question for Nexus
+          </label>
           <input
-            type="text"
-            placeholder="Why is payment-service failing?"
+            id="dashboard-question"
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                askCopilot()
-              }
-            }}
+            maxLength={4000}
+            placeholder="What should I check first?"
           />
-
-          <button onClick={askCopilot}>
-            Ask Nexus
-            <span>→</span>
-          </button>
-
-        </div>
-
-
-        {answer && (
-
-          <div className="copilot-answer">
-
-            <div className="answer-icon">
-              ✦
-            </div>
-
-            <div>
-              <span>NEXUS ANALYSIS</span>
-              <p>{answer}</p>
-            </div>
-
-          </div>
-
-        )}
-
+          <button disabled={!question.trim()}>Ask Nexus →</button>
+        </form>
       </section>
-
+      {service && (
+        <Modal title={service.name} onClose={() => setService(null)}>
+          <Badge value={service.status} />
+          <p>{service.description}</p>
+          <dl className="nx-detail-grid">
+            <div>
+              <dt>Uptime</dt>
+              <dd>{service.uptime}</dd>
+            </div>
+            <div>
+              <dt>Replicas</dt>
+              <dd>{service.replicas}</dd>
+            </div>
+            <div>
+              <dt>Region</dt>
+              <dd>{service.region}</dd>
+            </div>
+          </dl>
+          <h3>Related incidents</h3>
+          {data.incidents
+            .filter((item) => item.service === service.id)
+            .map((item) => (
+              <Link className="nx-record-link" key={item.id} to={`/incidents?id=${item.id}`}>
+                {item.id} · {item.title}
+                <Badge value={item.status} />
+              </Link>
+            ))}
+          {!data.incidents.some((item) => item.service === service.id) && (
+            <p>No recorded incidents for this service.</p>
+          )}
+          <p className="nx-meta">Incident status changes do not change service telemetry.</p>
+        </Modal>
+      )}
     </div>
   )
 }
-
-export default Dashboard
